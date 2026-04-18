@@ -1,16 +1,22 @@
 import { join } from "node:path"
-import { PGlite } from "@electric-sql/pglite"
 import { mock } from "bun:test"
-import { drizzle } from "drizzle-orm/pglite"
-import { migrate } from "drizzle-orm/pglite/migrator"
+import { drizzle } from "drizzle-orm/libsql"
+import { migrate } from "drizzle-orm/libsql/migrator"
+import { createClient } from "@libsql/client"
 import redis from "ioredis"
 
-console.time("PGLite init")
+console.time("LibSQL init")
 
-const pglite = new PGlite()
-const db = drizzle(pglite)
+const client = createClient({ url: ":memory:" })
+const db = drizzle(client)
 
-// mock.module("pg", () => ({ default: () => pglite }))
+mock.module("@libsql/client", () => ({
+  createClient: () => client,
+}))
+
+mock.module("drizzle-orm/libsql", () => ({ 
+  drizzle: () => db 
+}))
 
 mock.module("resend", () => ({
   Resend: class {
@@ -19,14 +25,11 @@ mock.module("resend", () => ({
     }
   },
 }))
-mock.module("drizzle-orm/postgres-js", () => ({ drizzle }))
-mock.module("postgres", () => ({
-  default: () => pglite,
-}))
+
 mock.module("ioredis", () => ({ Redis: redis, default: redis }))
 
 await migrate(db, {
   migrationsFolder: join(import.meta.dirname, "..", "drizzle"),
 })
 
-console.timeEnd("PGLite init")
+console.timeEnd("LibSQL init")

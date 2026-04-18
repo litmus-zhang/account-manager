@@ -95,7 +95,10 @@ export const spreads = <
     const newSchema: Record<string, unknown> = {}
     const keys = Object.keys(models)
 
-    for (const key of keys) newSchema[key] = spread(models[key], mode)
+    for (const key of keys) {
+        const model = models[key]
+        if (model) newSchema[key] = spread(model, mode)
+    }
 
     return newSchema as any
 }

@@ -1,8 +1,10 @@
-import { drizzle } from "drizzle-orm/postgres-js"
-import postgres from "postgres"
+// import { drizzle } from "drizzle-orm/postgres-js"
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
+// import postgres from "postgres"
 import { config } from "../config.ts"
 import * as schema from "./schema.ts"
-import { and, desc, eq, SQLWrapper } from "drizzle-orm"
+import { and, desc, eq, SQLWrapper, sql } from "drizzle-orm"
 import { reset, seed } from "drizzle-seed"
 import { NotFoundError } from "elysia"
 
@@ -12,16 +14,15 @@ export const PAGE_SIZE = 10
 
 
 
-const client = postgres(config.DATABASE_URL)
-export const db = drizzle({
-  client,
+const client = createClient({ url: config.DATABASE_URL });
+export const db = drizzle(client, {
   casing: "snake_case",
   schema,
 })
 
 export async function updateUserRole(userId: string, role: string = "admin") {
   return db.update(schema.user)
-    .set({ role })
+    .set({ role: role ?? "admin" })
     .where(eq(schema.user.id, userId))
     .returning()
 }
@@ -29,10 +30,10 @@ export async function updateUserRole(userId: string, role: string = "admin") {
 
 
 export async function clearDb() {
-  await reset(db, schema)
+  await reset(db as any, schema)
 }
 export async function seedDb() {
-  await seed(db, schema, {
+  await seed(db as any, schema, {
     count: 100,
   })
 }
@@ -57,7 +58,7 @@ export async function insertOne<T extends TableName>(
     return {
       success: true,
       message: `Successfully created a ${table}`,
-      data: res[0],
+      data: (res as any)[0],
     }
   }
   catch (error) {
@@ -79,7 +80,7 @@ export async function updateOne<T extends TableName>(
       .returning()
     return {
       message: `Successfully updated a ${table}`,
-      data: res[0],
+      data: (res as any)[0],
     }
   }
   catch (error) {
@@ -132,7 +133,7 @@ export async function deleteOne<T extends TableName>(
       .returning()
     return {
       message: `Successfully deleted a ${table}`,
-      data: res[0],
+      data: (res as any)[0],
     }
   }
   catch (error) {
@@ -142,43 +143,55 @@ export async function deleteOne<T extends TableName>(
 }
 
 export async function getAssets(userId: string, page = 1, pageSize = PAGE_SIZE) {
-  const data = await db.query.assets.findMany({
-    limit: pageSize,
-    offset: (page - 1) * pageSize,
-    with: {
-      // post_media: true,
-      // user: true,
-    },
-    orderBy: [desc(schema.assets.createdAt)],
-    where: and(eq(schema.assets.userId, userId)),
-  })
-  const total = await db.$count(
-    schema.assets,
-    and(eq(schema.assets.userId, userId)),
-  )
+  try {
+    const data = await db
+      .select()
+      .from(schema.assets)
+      .where(eq(schema.assets.userId, userId))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .orderBy(desc(schema.assets.createdAt))
 
-  return {
-    message: `Successfully retrieved all posts`,
-    data,
-    meta: getPaginatedMeta(page, pageSize, total),
+    const countRes = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(schema.assets)
+      .where(eq(schema.assets.userId, userId))
+
+    const total = countRes[0]?.count ?? 0
+
+    return {
+      message: `Successfully retrieved all assets`,
+      data,
+      meta: getPaginatedMeta(page, pageSize, total),
+    }
+  } catch (error) {
+    throw new Error("Failed to retrieve assets", { cause: error })
   }
 }
 
 export async function getTransactions(userId: string, page = 1, pageSize = PAGE_SIZE) {
-  const data = await db.query.transaction.findMany({
-    limit: pageSize,
-    offset: (page - 1) * pageSize,
-    orderBy: [desc(schema.transaction.createdAt)],
-    where: and(eq(schema.transaction.userId, userId)),
-  })
-  const total = await db.$count(
-    schema.transaction,
-    and(eq(schema.transaction.userId, userId)),
-  )
+  try {
+    const data = await db
+      .select()
+      .from(schema.transaction)
+      .where(eq(schema.transaction.userId, userId))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .orderBy(desc(schema.transaction.createdAt))
 
-  return {
-    message: `Successfully retrieved all transactions`,
-    data,
-    meta: getPaginatedMeta(page, pageSize, total),
+    const countRes = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(schema.transaction)
+      .where(eq(schema.transaction.userId, userId))
+
+    const total = countRes[0]?.count ?? 0
+
+    return {
+      message: `Successfully retrieved all transactions`,
+      data,
+      meta: getPaginatedMeta(page, pageSize, total),
+    }
+  } catch (error) {
+    throw new Error("Failed to retrieve transactions", { cause: error })
   }
 }

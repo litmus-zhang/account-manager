@@ -1,14 +1,14 @@
 import type { Config } from "drizzle-kit"
-import env from "env-var"
+import { config } from "./src/config"
 
-const DATABASE_URL = env.get("DATABASE_URL").required().asString()
+
 
 export default {
   schema: "./src/db/schema.ts",
   out: "./drizzle",
-  dialect: "postgresql",
+  dialect: "sqlite",
   casing: "snake_case",
   dbCredentials: {
-    url: DATABASE_URL,
+    url: config.DATABASE_URL,
   },
 } satisfies Config

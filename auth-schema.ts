@@ -1,7 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2"
-import { sqliteTable, text, index, integer } from "drizzle-orm/sqlite-core";
-
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -89,50 +87,6 @@ export const verification = sqliteTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-export const transaction = sqliteTable(
-  "transaction",
-  {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    type: text("type").notNull(),
-    amount: text("amount").notNull(),
-    currency: text("currency").notNull(),
-    status: text("status").notNull(),
-    description: text("description").notNull(),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [index("transaction_userId_idx").on(table.userId)],
-);
-export const assets = sqliteTable(
-  "asset",
-  {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    name: text("name").notNull(),
-    type: text("type").notNull(),
-    amount: text("amount").notNull(),
-    currency: text("currency").notNull(),
-    description: text("description"),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" })
-      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [index("asset_userId_idx").on(table.userId)]
-);
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
@@ -151,15 +105,3 @@ export const accountRelations = relations(account, ({ one }) => ({
     references: [user.id],
   }),
 }));
-
-
-export const table = {
-  user,
-  session,
-  account,
-  verification,
-  assets,
-  transaction
-} as const
-
-export type Table = typeof table

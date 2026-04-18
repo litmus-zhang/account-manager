@@ -5,7 +5,7 @@ import { createTestServer } from "./helpers/setup"
 
 
 
-let shutdown: () => Promise<void>
+let shutdown: () => Promise<void> = async () => {}
 
 // let restateTestEnvironment: RestateTestEnvironment;
 // let restateIngress: clients.Ingress;

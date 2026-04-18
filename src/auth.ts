@@ -12,7 +12,7 @@ let capturedToken = ""
 export const auth = betterAuth({
     //...x
     database: drizzleAdapter(db, {
-        provider: "pg", // or "mysql", "sqlite"
+        provider: "sqlite", // or "mysql", "sqlite","pg"
         schema,
     }),
     emailAndPassword: {
@@ -102,7 +102,7 @@ export const authGuard = new Elysia({ name: "authGuard" })
         // Auto-inject user/session in the request lifecycle
         const session = await auth.api.getSession({ headers: request.headers })
         if (session)
-            return { user: session.user, session: session.session, role: session.user?.role || "user" }
+            return { user: session.user, session: session.session, role: (session.user as any)?.role || "user" }
 
         // Optionally, leave undefined if not logged in
         return { user: null, session: null, role: null }
