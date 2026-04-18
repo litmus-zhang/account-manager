@@ -1,0 +1,24 @@
+services:
+  bot:
+    container_name: account-manager-bot
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+  postgres:
+    container_name: account-manager-postgres
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=account-manager
+      - POSTGRES_PASSWORD=27fa016fc5a25e8177a60ccd
+      - POSTGRES_DB=account-manager
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+volumes:
+  postgres_data:
+
+networks:
+  default: {}
